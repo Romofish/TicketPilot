@@ -1,0 +1,42 @@
+{
+  "name": "ticketpilot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.19.0",
+    "npm": "11.9.0"
+  },
+  "packageManager": "npm@11.9.0",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "setup:browser": "uv --cache-dir .cache/uv run --locked playwright install chromium",
+    "dev": "node scripts/dev.mjs",
+    "dev:backend": "uv --cache-dir .cache/uv run --locked uvicorn backend.main:app --host 127.0.0.1 --port 8000 --no-access-log",
+    "dev:frontend": "vite --config frontend/vite.config.ts",
+    "check": "node --check scripts/setup.mjs && node --check scripts/dev.mjs && tsc --noEmit -p frontend/tsconfig.json && uv --cache-dir .cache/uv run --locked ruff check backend tests scripts",
+    "build": "tsc --noEmit -p frontend/tsconfig.json && vite build --config frontend/vite.config.ts",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "uv --cache-dir .cache/uv run --locked pytest tests/unit",
+    "test:frontend": "vitest run --config frontend/vite.config.ts",
+    "test:browser": "uv --cache-dir .cache/uv run --locked pytest tests/browser",
+    "test:e2e": "uv --cache-dir .cache/uv run --locked pytest tests/e2e",
+    "release:package": "uv --cache-dir .cache/uv run --locked python scripts/package_release.py"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "7.0.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "jsdom": "30.1.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

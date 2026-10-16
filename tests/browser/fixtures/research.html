@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Private account person@example.com</title></head>
+<body>
+  <h1>Research fixture — not a ticket platform</h1>
+  <p>Available seats: 100 (unverified fixture text)</p>
+  <p>Account: person@example.com / +66812345678</p>
+  <a href="/another?token=private-query">Another page</a>
+  <form action="/order" method="post">
+    <label>Email <input name="email" value="person@example.com"></label>
+    <label>Password <input type="password" name="password" value="private-password"></label>
+    <button type="submit">Confirm order</button>
+  </form>
+  <button style="display:none">Invisible control</button>
+  <script>
+    window.orderInteractions = 0;
+    document.querySelector('form').addEventListener('submit', event => {
+      event.preventDefault();
+      window.orderInteractions += 1;
+    });
+    console.log('Cookie=session-private-token; person@example.com');
+    console.error('Authorization: Bearer private-bearer-token');
+  </script>
+</body>
+</html>
