@@ -56,4 +56,6 @@ Windows PowerShell 可执行 `Get-FileHash .\TicketPilot-v0.1.0-m2-preview-sourc
 - 当前云端对 ALL TICKET 的 HEAD 访问在代理 CONNECT 阶段返回 HTTP 403，未到达官网；没有获得真实页面结构、库存或锁票规则证据。人工登录及目标活动流程须在用户本地验证。
 - 用户报告开售为“明天泰国时间 11:00”；按 2026-10-17 客户端日期解释为 2026-10-18 泰国 11:00／上海 12:00，官方日程尚未核实。
 - 参考活动链接末尾分号暂按标点去除，原始输入仍在研究文档中，规范化候选地址未验证。
-- GitHub Draft Release 为用户要求的交付形式。当前 `api.github.com` 云网络访问受阻，GitHub 认证与上传权限尚未验证；本地 ZIP 生成不代表已经创建发布草稿。创建与上传需要云网络允许 `api.github.com`、`uploads.github.com`。真实平台云端研究另需 `www.allticket.com`；未修改任何基础配置。
+- GitHub Draft Release 为用户要求的交付形式。当前 `api.github.com` 云网络访问受阻，连接器已确认仓库写权限，但云端 CLI 认证与上传能力尚未验证；本地 ZIP 生成不代表已经创建发布草稿。创建与上传需要云网络允许 `api.github.com`、`uploads.github.com`。真实平台云端研究另需 `www.allticket.com`；未修改任何基础配置。
+
+源码已推送到 `release/v0.1.0-m2-preview` 专用分支；草稿 Release 尚未创建。源码 ZIP 已在全新临时目录通过准备和生产构建检查。

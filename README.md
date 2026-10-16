@@ -64,3 +64,7 @@ npm run test:e2e       # 自动启动独立测试前端，测试完成后停止
 - [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)、[TTM 研究](docs/TTM_RESEARCH.md)
 
 `backend/` 包含 API、独立 Adapter、研究服务、模型和存储；`frontend/` 为 React 工作台。`tests/unit/`、`tests/browser/`、`tests/e2e/` 分别验证后端规则、页面观察、界面流程。模拟器与选座辅助属于后续 M3–M5，尚未交付。
+
+## 发行包
+
+`npm run release:package` 在 `dist/` 生成可复现源码 ZIP 和 SHA256SUMS，详见 [发布说明](docs/RELEASE_NOTES.md)。已在全新解压目录验证依赖准备和构建。草稿发布所需云网络配置见 [网络修复记录](docs/CLOUD_NETWORK.md)。

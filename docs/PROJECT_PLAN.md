@@ -37,10 +37,12 @@ M1、M2 工具实现已完成，并通过本地自动化测试及浏览器集成
 
 ## GitHub Draft Release 交付
 
-- 用户要求：提供可供本地运行的 GitHub Draft Release；具体创建结果尚未验证。
+- 用户要求：提供可供本地运行的 GitHub Draft Release。源码已推送到 `release/v0.1.0-m2-preview` 专用分支，初始交付提交 `353b053`；Release 草稿尚未创建。
 - 当前证据：执行 `gh api user` 时，对 `api.github.com` 的访问返回 Forbidden；当前云网络阻止访问，不能据此认定 GitHub 凭据无效或缺少发布权限，云端 CLI 认证仍未知。另已通过 GitHub 连接器确认 `Romofish/TicketPilot` 为当前远程仓库且具备 push/admin 权限。
 - 云环境需求：创建草稿及上传产物需要允许访问 `api.github.com`、`uploads.github.com`；云端平台研究另需 `www.allticket.com`。未修改网络策略或其他基础配置。
-- 下一步：本地测试及源码打包脚本、发布说明已完成；网络访问可用后验证 GitHub 权限，创建草稿并上传产物。仓库内构建与文档工作继续推进。
+- 本地交付验证：源码 ZIP 和 SHA256SUMS 已生成；连续打包字节一致；解压到全新临时目录后，`npm run setup` 和 `npm run build` 均通过，未复用项目的 node_modules、虚拟环境或缓存。发行包排除了真实 .env、数据库、缓存和浏览器登录状态。
+- 自动审批拒绝直接推送公开仓库 main，已采用审批建议的专用发布分支并成功推送；没有改写 main。
+- 下一步：当前云环境工具只读，已请求用户在配置界面添加允许列表。网络访问可用后验证 CLI 认证，创建草稿并上传产物，详见 `CLOUD_NETWORK.md`。
 
 ## 使用前需要区分的两类验证
 
