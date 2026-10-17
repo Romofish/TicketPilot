@@ -1,6 +1,8 @@
 # TicketPilot
 
-ALL TICKET 优先、TTM 第二的本地浏览器研究工具。通过正常浏览器记录加载时间、可见结构和人工观察时间点，为后续选座辅助积累证据。当前范围为 **M1 基础工程 + M2 Browser Research**；不自动选座、占座、提交订单或支付，真实平台机制尚未验证。
+ALL TICKET 优先、TTM 第二的本地购票准备与浏览器研究工具。提供官方开售时间倒计时、票档降级建议、费用与预算核对、人工流程清单，以及正常浏览器中的脱敏观察记录。座位选择、订单和付款仍由用户在官网完成；真实平台完整购票流程尚未验证。
+
+当前为 **Draft 候选版，尚未完成云端真实购票验收**。用户已要求先在云端验收，下面的本机运行说明供未来使用，并不要求用户现在下载安装测试。验收范围、云浏览器接入缺口和逐项状态见 [云端验收记录](docs/CLOUD_ACCEPTANCE.md)。
 
 ## 本机运行
 
@@ -17,7 +19,7 @@ npm run dev
 
 准备脚本执行 `npm ci`、`uv sync --locked --all-groups` 和代码检查，仅在不存在时创建 `.env`。重复运行保留现有 `.env`。`setup:browser` 安装 Playwright Chromium，不隐式安装系统库。
 
-浏览器打开在**后端所在电脑**上。用户已选择本机运行；云环境没有图形桌面，云端无头测试不能用于人工登录。若以后需要云端人工操作，需配置受控桌面及官方域名网络访问。
+浏览器打开在**后端所在电脑**上。当前云端没有已连接的可接管桌面或 Browser/CUA 通道，云端无头测试不能用于人工登录；云端真实验收需先建立受控浏览器会话。用户名密码或域名允许名单本身不能建立这个交互入口。
 
 ## 研究流程
 
@@ -27,7 +29,15 @@ npm run dev
 4. 按实际观察标记 T1（进入选座）、T2（人工选择后）、T3（人工确认后）。标记只记录时间，不执行平台操作，也不判定锁票成功。
 5. 导出脱敏 JSON；结束会话关闭浏览器并丢弃临时登录态。本地 SQLite 保留脱敏历史。
 
-目标：[PlsLoveFanScreeningFinalEP](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)。参考：[LENAMIUGirlsNightOutBDParty](https://www.allticket.com/event/LENAMIUGirlsNightOutBDParty)。参考地址去掉了用户链接末尾的分号，规范 URL 尚待实地验证。**官方开售日期、时间及购票规则待核实，以活动官方页面为准。** 用户已说明此前开售时间来自模糊记忆，该回忆不再作为日程或开发规划依据；核实证据记录在 [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)，准备与操作顺序见 [活动执行计划](docs/SALE_DAY_PLAN.md)。
+目标：[PlsLoveFanScreeningFinalEP](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)。参考：[LENAMIUGirlsNightOutBDParty](https://www.allticket.com/event/LENAMIUGirlsNightOutBDParty)。目标官方正文公告 **2026-10-18 北京时间 12:00 / 泰国时间 11:00 AM** 开售，公开文字于 2026-10-17 核实；但同页座区海报印有 **11:00 PM**，存在 12 小时冲突。程序按正文较早时间做准备并提示冲突，最终须复核官网更新。证据见 [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)，准备顺序见 [活动执行计划](docs/SALE_DAY_PLAN.md)，倒计时与购票代码分析见 [流程证据](docs/ALLTICKET_FLOW_EVIDENCE.md)。
+
+## 购票辅助
+
+- 用户已确认的策略：最高票档优先，官网明确无票再降到下一档；座位靠中或靠过道。目标票档顺序为 2,500 → 2,000 → 1,500 → 900 THB。尚未确认张数，界面初值可修改。
+- 本地倒计时使用本机时钟；到点只提示计划时间已到，不能证明官网已经开放或仍有库存，也不自动刷新、跳转或下单。
+- 按实际张数计算已知票面与服务费小计；支付手续费基数尚未核实，不伪造最终应付金额。确认订单前以官网总额为准。
+- 票档状态和流程核对由用户人工填写；“未知”不会被当作售罄而自动降档。切换活动清空本地核对，参考活动的规则与目标分开。
+- 座位建议是观演偏好分析。没有实时销量或库存变化证据，不提供虚构热门榜、具体可售座号或锁票保证。辅助面板不保存个人、证件或支付资料。
 
 ## 配置和隐私
 
@@ -63,8 +73,8 @@ npm run test:e2e       # 自动启动独立测试前端，测试完成后停止
 - [里程碑与测试结果](docs/PROJECT_PLAN.md)、[测试计划](docs/TEST_PLAN.md)、[技术决策](docs/DECISIONS.md)
 - [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)、[TTM 研究](docs/TTM_RESEARCH.md)
 
-`backend/` 包含 API、独立 Adapter、研究服务、模型和存储；`frontend/` 为 React 工作台。`tests/unit/`、`tests/browser/`、`tests/e2e/` 分别验证后端规则、页面观察、界面流程。模拟器与选座辅助属于后续 M3–M5，尚未交付。
+`backend/` 包含 API、独立 Adapter、研究服务、模型和存储；`frontend/` 为 React 工作台及本地购票辅助。`tests/unit/`、`tests/browser/`、`tests/e2e/` 分别验证后端规则、页面观察、界面流程。真实座位解析与自动选座尚未交付。
 
 ## 发行包
 
-`npm run release:package` 在 `dist/` 生成可复现源码 ZIP 和 SHA256SUMS，详见 [发布说明](docs/RELEASE_NOTES.md)。已在全新解压目录验证依赖准备和构建。草稿发布所需云网络配置见 [网络修复记录](docs/CLOUD_NETWORK.md)。
+`npm run release:package` 在 `dist/` 生成可复现源码 ZIP 和 SHA256SUMS，详见 [发布说明](docs/RELEASE_NOTES.md)。GitHub Release 的发布状态、来源提交与附件必须单独验证；`release/…` 分支不是 Release，源码 ZIP 也不是已验证的桌面安装包。Draft 仅向有仓库相应权限的登录用户显示。云网络情况见 [网络记录](docs/CLOUD_NETWORK.md)。

@@ -1,8 +1,17 @@
 # 云网络验证记录
 
-更新日期：2026-10-17（Asia/Shanghai）。本次从 `release/v0.1.0-m2-preview` 恢复，新实例加载了包含目标域名的配置；以下替代此前旧实例的阻断结论。
+更新日期：2026-10-17（Asia/Shanghai）。各轮观测的环境配置与结果不同，以下按记录范围区分。
 
-## 配置与实际连通性
+## 本轮追加验证：域名配置已生效
+
+- 当前 `observations_current=true`、`observed_phase=running`、`network_policy.state=enforced`，规格版本与观测版本均为 2。配置版本为 `cecfgver_6ad31951f8f0819b9664224a44acb71c`。
+- 生效自定义域名包含 `allticket.com`、`www.allticket.com`、`atkmedia.allticket.com`、两个已配置的 AWS WAF SDK/captcha 主机、`cdnjs.cloudflare.com`、`fonts.googleapis.com`、`www.google.com` 以及 GitHub API/上传主机。配置存在不等于所有页面功能已验证。
+- 通过命令级 network 权限、继承代理与正常 TLS 校验，官网首页实际返回 HTTP 200，公开脚本和目标座区海报可读取。默认命令沙箱的 Operation not permitted 是命令权限层，与域名名单分开。
+- 当前没有可调用的交互式 Browser/CUA 工具，也没有用户已登录会话；没有重试旧的真实浏览器流程、修改 CA 或关闭 TLS。此前 Chromium 证书问题仍为历史待验证项，不能仅因域名补齐就声称已解决。
+- 官方当前售票状态读取未成功，详细 HTTP 结果与范围见 [本轮流程证据](ALLTICKET_FLOW_EVIDENCE.md)。未尝试绕过失败或重放购票请求。
+- 本轮仅开发和本地验证应用；未修改 GitHub 草稿或上传新版资产。
+
+## 前轮配置与实际连通性（历史）
 
 - 状态工具：`observations_current=true`、运行中；源配置版本 `cecfgver_6ad30982c310819b8ae300ce04500ad5`，规格版本 2。自定义列表包含 `www.allticket.com`、`allticket.com`、`api.github.com`、`uploads.github.com`；`network_policy.state=unknown`，不能声称运行时已报告 enforced。
 - `/etc/codex/network-policy.json` 为 version 1、restricted，包含上述域名和包管理器预设；`vpn_configured=false`，没有 TCP grants。本次未编辑策略、移除代理或关闭 TLS 校验。

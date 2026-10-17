@@ -7,6 +7,7 @@ import socket
 import subprocess
 import time
 from pathlib import Path
+from urllib.parse import urlsplit
 from urllib.request import urlopen
 
 import pytest
@@ -163,3 +164,61 @@ async def test_no_display_explains_local_manual_login_requirement(page, frontend
     await page.goto(frontend_url)
     await expect(page.get_by_role("button", name="打开研究浏览器")).to_be_disabled()
     await expect(page.get_by_role("note")).to_contain_text("未检测到桌面")
+
+
+async def test_sale_countdown_reaches_zero_without_platform_requests(page, frontend_url):
+    """The scheduled time must never be presented as verified sale availability."""
+    requests = []
+    page.on("request", lambda request: requests.append(request.url))
+    mutations = await mock_api(page)
+    await page.clock.install(time="2026-10-18T03:59:58Z")
+    await page.goto(frontend_url)
+    await expect(page.get_by_role("timer", name="距离计划开售")).to_be_visible()
+    await expect(page.get_by_text("北京 12:00", exact=True)).to_be_visible()
+    await expect(page.get_by_text("泰国 11:00", exact=True)).to_be_visible()
+    Path("test-results").mkdir(exist_ok=True)
+    await page.get_by_role("region", name="开售准备与购票核对", exact=True).screenshot(
+        path="test-results/ticket-assistant-desktop.png"
+    )
+    await page.clock.fast_forward(3000)
+    await expect(page.get_by_text("已到计划开售时间，请以官网状态为准", exact=True)).to_be_visible()
+    await expect(page.get_by_role("link", name="打开目标活动官网")).to_have_attribute(
+        "href", "https://www.allticket.com/event/PlsLoveFanScreeningFinalEP"
+    )
+    assert not mutations
+    assert all(urlsplit(url).hostname in {"localhost", "127.0.0.1"} for url in requests)
+
+
+async def test_manual_purchase_checklist_isolated_between_activities(page, frontend_url):
+    """All seven local checkpoints can be rehearsed without creating an order."""
+    mutations = await mock_api(page)
+    await page.goto(frontend_url)
+    await page.locator(".checklist-details > summary").click()
+    steps = ["登录与验证", "场次与票档", "选座", "官网确认", "支付页核对", "官网付款结果", "取票与入场"]
+    for step in steps:
+        await page.get_by_role("checkbox", name=f"{step}：人工已核对", exact=True).check()
+    await expect(page.get_by_text("7/7 人工已核对", exact=True)).to_be_visible()
+    await page.get_by_role("button", name="参考流程核对", exact=True).click()
+    await page.locator(".checklist-details > summary").click()
+    for step in steps:
+        await expect(page.get_by_role("checkbox", name=f"{step}：人工已核对", exact=True)).not_to_be_checked()
+    await expect(page.get_by_text("0/7 人工已核对", exact=True)).to_be_visible()
+    await page.get_by_role("button", name="目标购票准备", exact=True).click()
+    await page.locator(".checklist-details > summary").click()
+    await expect(page.get_by_role("checkbox", name="官网付款结果：人工已核对", exact=True)).not_to_be_checked()
+    assert not mutations
+
+
+async def test_tier_fallback_requires_explicit_manual_report(page, frontend_url):
+    mutations = await mock_api(page)
+    await page.goto(frontend_url)
+    await page.locator(".manual-tier-details > summary").click()
+    await expect(page.locator(".tier-recommendation")).to_contain_text("下一步核对 2,500 THB")
+    await page.locator("#tier-status-2000").select_option("available")
+    await expect(page.locator(".tier-recommendation")).to_contain_text("下一步核对 2,500 THB")
+    await page.locator("#tier-status-2500").select_option("unavailable")
+    await expect(page.locator(".tier-recommendation")).to_contain_text("下一步核对 2,000 THB")
+    await page.locator("#ticket-quantity").fill("2")
+    await expect(page.locator("#tier-status-2500")).to_have_value("unknown")
+    await expect(page.locator(".tier-recommendation")).to_contain_text("下一步核对 2,500 THB")
+    assert not mutations

@@ -3,6 +3,7 @@ import { validateActivityUrl } from './api';
 import { useResearch } from './useResearch';
 import { Icon, StatusBadge, duration, formatTime, kindNames, markerDetails, pageNames, platformNames } from './components';
 import type { Observation, Platform } from './types';
+import TicketAssistant from './TicketAssistant';
 
 export default function App() {
   const research = useResearch();
@@ -35,6 +36,8 @@ export default function App() {
           <div><div className="eyebrow">BROWSER RESEARCH</div><h2>把每一次观察，变成证据。</h2><p>打开官方活动页面，手动操作，记录真实的页面状态与耗时。</p></div>
           <div className="platform-priority"><span className="priority-dot" /><div><strong>ALL TICKET 优先</strong><span>独立适配 · TTM 同步研究</span></div></div>
         </div>
+
+        <TicketAssistant />
 
         {connectionError && <div className="notice error" role="alert"><span>{connectionError}</span><button className="text-button" onClick={() => void research.loadWorkspace()}>重新连接</button></div>}
         {actionError && <div className="notice error" role="alert"><span>{actionError}</span><button className="icon-button" aria-label="关闭错误提示" onClick={research.dismissError}><Icon name="close" size={16} /></button></div>}
