@@ -12,7 +12,7 @@
 
 ## GitHub Draft Release
 
-CLI 认证与草稿创建已通过，Release ID 为 415622865，draft/prerelease 均为 true。但直接上传向 uploads.github.com 返回 401 Bad credentials；尚不能认定上传认证就绪。改用仓库内手动 GitHub Actions 标准 GITHUB_TOKEN 打包上传并回下载校验，不提取或转移云端注入凭据。实际结果见 `PROJECT_PLAN.md`；本地打包或 Git 推送本身不等于草稿成功。不得打印凭据或真实 `.env`。
+CLI 认证与草稿创建已通过，Release ID 为 415622865，draft/prerelease 均为 true。但直接上传向 uploads.github.com 返回 401 Bad credentials；尚不能认定上传认证就绪。改用仓库内手动 GitHub Actions 标准 GITHUB_TOKEN 打包上传并回下载校验，不提取或转移云端注入凭据。Actions 执行 39009442651 已成功上传两个资产并回下载校验，草稿保持未发布；最终来源与后续刷新结果见 `PROJECT_PLAN.md` 和 Release 元数据；本地打包或 Git 推送本身不等于草稿成功。不得打印凭据或真实 `.env`。
 
 ## 历史说明
 

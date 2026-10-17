@@ -38,11 +38,11 @@ M1、M2 工具实现已完成，并通过本地自动化测试及浏览器集成
 ## GitHub Draft Release 交付
 
 - 专用分支：`release/v0.1.0-m2-preview`，没有改写 main。
-- 已创建 [TicketPilot v0.1.0-m2-preview 草稿](https://github.com/Romofish/TicketPilot/releases/tag/untagged-1ccc95584cc5fb88385b)，Release ID `415622865`；API 已确认 `draft=true`、`prerelease=true`。草稿仅向有仓库相应权限的用户显示，不公开发布。
+- 已创建 [TicketPilot v0.1.0-m2-preview 草稿](https://github.com/Romofish/TicketPilot/releases)，Release ID `415622865`；API 已确认 `draft=true`、`prerelease=true`。草稿仅向有仓库相应权限的用户显示，不公开发布。
 - CLI 经原代理已确认 Romofish 和仓库 push/admin 权限；直接 `gh release upload` 在 `uploads.github.com` 返回 **401 Bad credentials**。这与先前网络 CONNECT 403 不同：API 认证及草稿创建成功，上传通道认证仍有问题，不能将 HEAD 可达或草稿创建等同于资产上传成功。
 - 资产交付改用 `.github/workflows/draft-release.yml`：仅手动触发，使用 GitHub Actions 标准 `GITHUB_TOKEN`，只允许更新现有草稿；校验指定提交与草稿 target 一致，重复打包、上传 ZIP/SHA256SUMS、回下载并逐字节比对。工作流不发布 Release，不访问票务平台，也不需要新增用户密钥。
-- 工作流实际执行结果须在 [Actions](https://github.com/Romofish/TicketPilot/actions/workflows/draft-release.yml) 和 Release 资产列表确认；直接 CLI 上传失败不作为上传完成的证据。最终交付状态另由本次执行结果报告。
-- 本地源码 ZIP 已重复打包字节一致；发行包排除真实 .env、数据库、缓存、依赖和浏览器登录状态。历史版本已在全新解压目录通过 setup/build，本次文档更新后的包另行复验。
+- 首次 [Actions 执行 39009442651](https://github.com/Romofish/TicketPilot/actions/runs/39009442651) 已成功：两个资产均为 uploaded，重复打包和上传后回下载逐字节比对通过，草稿仍为 draft/prerelease。该次打包来源为 3e5a608；本段状态文档提交后，以相同流程刷新最终提交的资产并再次验证，最终来源以 Release targetCommitish 和 Actions 为准。
+- 本地源码 ZIP 已重复打包字节一致；发行包排除真实 .env、数据库、缓存、依赖和浏览器登录状态。历史版本已在全新解压目录通过 setup/build，本次文档更新后的包已在全新临时目录通过 `npm run setup` 和 `npm run build`，未复用项目依赖、虚拟环境或缓存。
 
 ## 本次恢复验证（2026-10-17，Asia/Shanghai）
 

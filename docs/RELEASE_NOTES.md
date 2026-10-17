@@ -61,6 +61,6 @@ Windows PowerShell 可执行 `Get-FileHash .\TicketPilot-v0.1.0-m2-preview-sourc
 
 ## Draft Release 交付
 
-发布来源为 `release/v0.1.0-m2-preview` 专用分支。GitHub Release 保持 **draft=true、prerelease=true**，不公开发布；源码 ZIP 与 SHA256SUMS 由手动 GitHub Actions 工作流作为资产上传并回下载校验。云端直接上传曾返回 401，草稿创建成功不代表资产已就绪；实际工作流结果与资产状态以 GitHub 为准。草稿对有仓库相应权限的用户可见，具体结果见 `docs/PROJECT_PLAN.md`。
+发布来源为 `release/v0.1.0-m2-preview` 专用分支。GitHub Release 保持 **draft=true、prerelease=true**，不公开发布；源码 ZIP 与 SHA256SUMS 由手动 GitHub Actions 工作流作为资产上传并回下载校验。云端直接上传曾返回 401，草稿创建成功不代表资产已就绪；Actions 执行 39009442651 已成功上传并回下载校验；后续文档提交使用同一流程刷新资产，最终来源与校验状态以 GitHub 元数据和最新工作流为准。草稿对有仓库相应权限的用户可见，具体结果见 `docs/PROJECT_PLAN.md`。
 
 本次恢复验证：`npm run setup`、类型/lint、后端 30 项、前端 22 项、本地 Chromium 2 项、工作台 E2E 3 项以及生产构建均通过，共 57 项测试。浏览器自动测试均使用本地 fixture/模拟 API，不代表已验证真实购票。
