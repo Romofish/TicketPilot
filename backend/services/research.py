@@ -8,6 +8,11 @@ from playwright.async_api import TimeoutError as BrowserTimeout
 from backend.adapters import ADAPTERS
 from backend.models.research import OpenSession
 from backend.services.browser import BrowserObserver
+from backend.services.browser_profiles import (
+    BrowserProfileBusy,
+    BrowserProfileError,
+    BrowserProfiles,
+)
 from backend.settings import Settings
 from backend.storage.repository import Repository
 
@@ -23,6 +28,30 @@ class ResearchService:
         self.disposals: dict[str, asyncio.Task] = {}
         self.last_capture: dict[str, float] = {}
         self.lock = asyncio.Lock()
+        self.profiles = BrowserProfiles(settings)
+
+    def _browser_in_use(self) -> bool:
+        return bool(self.browsers or self.disposals or any(
+            session["status"] in {"active", "opening"} for session in self.repository.list()
+        ))
+
+    def profile_status(self, platform: str) -> dict:
+        try:
+            return self.profiles.status(platform, browser_in_use=self._browser_in_use())
+        except (BrowserProfileError, OSError):
+            raise HTTPException(503, "无法访问应用专用浏览器数据；请检查数据目录及权限。") from None
+
+    async def clear_profile(self, platform: str) -> dict:
+        async with self.lock:
+            if self._browser_in_use():
+                raise HTTPException(409, "请先关闭浏览器并等待清理完成，再清除已保存的数据。")
+            try:
+                self.profiles.clear(platform)
+            except BrowserProfileBusy:
+                raise HTTPException(409, "浏览器数据正在使用；请关闭使用该数据的 TicketPilot 后重试。") from None
+            except (BrowserProfileError, OSError):
+                raise HTTPException(503, "无法清除应用专用浏览器数据；请检查数据目录及权限。") from None
+            return self.profile_status(platform)
 
     def get(self, session_id: str) -> dict:
         session = self.repository.get(session_id)
@@ -51,14 +80,15 @@ class ResearchService:
                 "然后在打开的浏览器中人工登录；云环境需要远程桌面才能人工登录。"
             )
         async with self.lock:
-            if self.browsers or self.disposals or any(
-                session["status"] in {"active", "opening"} for session in self.repository.list()
-            ):
+            if self._browser_in_use():
                 raise HTTPException(409, "请先关闭当前研究会话；一次仅允许一个浏览器会话。")
             session = self.repository.create_session(request.platform, url, request.event_name)
             session_id = session["id"]
             try:
-                browser = self.factory(self.settings, lambda kind, data: self._emit(session_id, kind, data))
+                browser = self.factory(
+                    self.settings, lambda kind, data: self._emit(session_id, kind, data),
+                    platform=request.platform,
+                )
             except Exception:
                 self.repository.add_event(session_id, "session_error", {"category": "browser_start_failed"})
                 return self.repository.update(session_id, "failed", "浏览器初始化失败；请检查本地配置后重试。")
@@ -77,14 +107,19 @@ class ResearchService:
             raise
         except Exception as error:
             if self.get(session_id)["status"] not in {"closed", "failed"}:
-                message = (
-                    "页面加载超时；已保留错误分类，请关闭后检查连接并重新打开。"
-                    if isinstance(error, BrowserTimeout)
-                    else "浏览器打开失败；请检查 Playwright 浏览器安装、网络和桌面配置。"
-                )
-                self.repository.add_event(session_id, "session_error", {
-                    "category": "navigation_timeout" if isinstance(error, BrowserTimeout) else "browser_start_failed"
-                })
+                if isinstance(error, BrowserProfileBusy):
+                    category = error.category
+                    message = "应用专用浏览器数据正在使用；请先关闭另一 TicketPilot 会话。"
+                elif isinstance(error, BrowserProfileError):
+                    category = error.category
+                    message = "无法访问应用专用浏览器数据；请检查数据目录及权限。"
+                elif isinstance(error, BrowserTimeout):
+                    category = "navigation_timeout"
+                    message = "页面加载超时；已保留错误分类，请关闭后检查连接并重新打开。"
+                else:
+                    category = "browser_start_failed"
+                    message = "浏览器打开失败；请检查 Playwright 浏览器安装、网络和桌面配置。"
+                self.repository.add_event(session_id, "session_error", {"category": category})
                 self.repository.update(session_id, "failed", message)
         finally:
             if self.get(session_id)["status"] != "active":
@@ -106,7 +141,7 @@ class ResearchService:
             await browser.close()
         except Exception:
             # Browser errors may embed full URLs, local paths or credentials.
-            pass
+            self.repository.add_event(session_id, "session_error", {"category": "browser_cleanup_failed"})
         finally:
             self.browsers.pop(session_id, None)
             self.disposals.pop(session_id, None)

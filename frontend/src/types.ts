@@ -6,6 +6,15 @@ export interface ResearchConfig {
   display_available: boolean;
   max_active_sessions: number;
   capture_cooldown_seconds: number;
+  persistent_browser_session: boolean;
+}
+export interface BrowserProfileStatus {
+  platform: Platform;
+  persistence_enabled: boolean;
+  saved_data_present: boolean;
+  login_status: 'unverified';
+  browser_in_use: boolean;
+  can_clear: boolean;
 }
 export interface Session {
   id: string;

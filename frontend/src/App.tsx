@@ -4,6 +4,7 @@ import { useResearch } from './useResearch';
 import { Icon, StatusBadge, duration, formatTime, kindNames, markerDetails, pageNames, platformNames } from './components';
 import type { Observation, Platform } from './types';
 import TicketAssistant from './TicketAssistant';
+import BrowserSessionState from './BrowserSessionState';
 
 export default function App() {
   const research = useResearch();
@@ -56,6 +57,7 @@ export default function App() {
                 <label className="field-label" htmlFor="event-name">研究名称 <span>选填</span></label>
                 <input id="event-name" maxLength={120} autoComplete="off" placeholder="例如：周末演出 · 首次观察" value={eventName} onChange={(event) => setEventName(event.target.value)} />
                 <p className="field-help">请勿填写姓名、账号或其他个人信息。</p>
+                {config && <BrowserSessionState key={platform} platform={platform} persistenceEnabled={config.persistent_browser_session} sessionKey={`${liveSession?.id ?? ''}:${liveSession?.status ?? ''}`} actionPending={Boolean(pending)} />}
                 <button className="button primary launch-button" type="submit" disabled={Boolean(pending || liveSession || !hasBrowser || connectionError)}>{pending === 'launch' ? '正在打开浏览器…' : '打开研究浏览器'}<Icon name="arrow" size={18} /></button>
                 {liveSession && <p className="field-help active-hint">已有进行中的会话，请先结束后再新建。</p>}
                 {config && !hasBrowser && <p className="environment-hint" role="note">{config.browser_mode === 'headless' ? '当前为无头测试模式，无法手动登录。请使用有桌面的环境，以 headed 模式启动后端。' : '后端未检测到桌面显示。请在本地桌面运行后端，或连接云桌面后再启动。'}</p>}
@@ -64,7 +66,7 @@ export default function App() {
 
             <section className="manual-guide" aria-labelledby="manual-guide-heading">
               <span className="guide-icon"><Icon name="eye" size={21} /></span><h3 id="manual-guide-heading">你来操作，工具来记录</h3>
-              <ol><li>浏览器在<strong>运行后端的机器</strong>打开；云端使用时需连接该机器的桌面。</li><li>在官方页面手动登录，按平台要求完成验证或排队。</li><li>回到这里记录页面，或为已发生的操作添加时间标记。</li></ol>
+              <ol><li>浏览器在<strong>运行后端的机器</strong>打开；云端使用时需连接该机器的桌面。</li><li>在官方页面查看登录状态，按需登录并完成平台验证或排队。</li><li>回到这里记录页面，或为已发生的操作添加时间标记。</li></ol>
               <p>记录按钮只采集页面或标记时间，不选择座位、不确认订单。</p>
             </section>
 
@@ -81,7 +83,7 @@ export default function App() {
                 <div className="session-summary"><span className="session-kicker">{platformNames[current.platform]} / RESEARCH SESSION</span><h4>{current.event_name || '未命名活动研究'}</h4><p className="session-url"><Icon name="external" size={14} /><span>{current.url}</span></p><div className="session-meta"><span><Icon name="clock" size={14} />{formatTime(current.started_at)} 开始</span><code>#{current.id.slice(0, 8)}</code></div></div>
                 {current.error && <div className="session-error" role="alert">{current.error}</div>}
                 {current.status === 'opening' && <div className="session-instruction"><span className="pulse-dot" />正在打开页面，请稍候。加载失败也会保留诊断记录。</div>}
-                {current.status === 'active' && <div className="session-instruction"><Icon name="eye" size={18} />请在独立浏览器手动登录和浏览。准备好后，记录当前页面。</div>}
+                {current.status === 'active' && <div className="session-instruction"><Icon name="eye" size={18} />请在独立浏览器查看登录状态，按需完成登录。准备好后，记录当前页面。</div>}
                 <div className="session-actions"><button className="button primary" disabled={Boolean(pending || current.status !== 'active' || cooldownSeconds)} onClick={() => void research.record('capture')}><Icon name="plus" size={17} />{pending === 'capture' ? '正在记录…' : cooldownSeconds ? `${cooldownSeconds} 秒后可再次记录` : '记录当前页面'}</button><button className="button secondary" disabled={Boolean(pending)} onClick={() => void research.exportSession()}><Icon name="download" size={16} />{pending === 'export' ? '正在导出…' : '导出脱敏 JSON'}</button>{['active', 'opening'].includes(current.status) && <button className="text-button end-button" disabled={Boolean(pending)} onClick={() => void research.closeSession()}>{pending === 'close' ? '正在结束…' : '结束会话'}</button>}</div>
               </>}
             </section>

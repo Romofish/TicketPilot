@@ -83,7 +83,7 @@ export function useResearch() {
       const session = await post<Session>('/research/sessions', { platform, url: url.trim(), ...(eventName.trim() ? { event_name: eventName.trim() } : {}) });
       setSessions((previous) => [session, ...previous.filter((item) => item.id !== session.id)]);
       setSelectedId(session.id);
-      setNotice('研究会话已创建。请在后端所在机器的浏览器中手动登录。');
+      setNotice('研究会话已创建。请在后端所在机器的浏览器中查看登录状态，按需完成登录。');
     } catch (error) { setActionError((error as Error).message); }
     finally { setPending(null); }
   }

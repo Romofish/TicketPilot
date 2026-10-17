@@ -9,6 +9,7 @@ from urllib.parse import urlsplit
 
 from playwright.async_api import Browser, BrowserContext, Page, Playwright, async_playwright
 
+from backend.services.browser_profiles import BrowserProfileError, BrowserProfiles, ProfileLease
 from backend.services.redaction import sanitized_url
 from backend.settings import Settings
 
@@ -51,8 +52,9 @@ OBSERVE_SCRIPT = """() => {
 
 
 class BrowserObserver:
-    def __init__(self, settings: Settings, emit: Callable[[str, dict], None]):
+    def __init__(self, settings: Settings, emit: Callable[[str, dict], None], *, platform: str = "allticket"):
         self.settings = settings
+        self.platform = platform
         self.emit = emit
         self.playwright: Playwright | None = None
         self.browser: Browser | None = None
@@ -62,10 +64,21 @@ class BrowserObserver:
         self._closing = False
         self._tasks: set[asyncio.Task] = set()
         self._console: Counter = Counter()
+        self._profile_lease: ProfileLease | None = None
+        self._attached_pages: set[Page] = set()
+        self._browser_launch_started = False
 
     async def open(self, url: str) -> dict:
         if not self.settings.headless and not self.settings.display_available:
             raise RuntimeError("display_unavailable")
+        profile_path = None
+        if self.settings.persistent_browser_session:
+            profiles = BrowserProfiles(self.settings)
+            try:
+                self._profile_lease = profiles.acquire(self.platform)
+                profile_path = profiles.path(self.platform, create=True)
+            except OSError:
+                raise BrowserProfileError() from None
         self.playwright = await async_playwright().start()
         launch: dict = {"headless": self.settings.headless}
         if self.settings.browser_executable_path:
@@ -82,12 +95,20 @@ class BrowserObserver:
                     launch["proxy"]["username"] = parsed.username
                 if parsed.password:
                     launch["proxy"]["password"] = parsed.password
-        self.browser = await self.playwright.chromium.launch(**launch)
-        self.browser.on("disconnected", self._disconnected)
-        # A fresh context per session. No cookies, login state, HAR, or traces saved.
-        self.context = await self.browser.new_context()
+        self._browser_launch_started = True
+        if profile_path is not None:
+            self.context = await self.playwright.chromium.launch_persistent_context(
+                str(profile_path), **launch
+            )
+        else:
+            self.browser = await self.playwright.chromium.launch(**launch)
+            self.browser.on("disconnected", self._disconnected)
+            self.context = await self.browser.new_context()
+        self.context.on("close", self._disconnected)
         self.context.on("page", self._attach)
-        page = await self.context.new_page()
+        for existing_page in self.context.pages:
+            self._attach(existing_page)
+        page = self.page or await self.context.new_page()
         response = await page.goto(
             url, wait_until="domcontentloaded", timeout=self.settings.navigation_timeout_ms
         )
@@ -96,11 +117,14 @@ class BrowserObserver:
         return await self.capture()
 
     def _disconnected(self) -> None:
-        if not self._closing:
+        if not self._closing and not self.closed:
             self.closed = True
             self.emit("browser_closed", {"reason": "browser_window_closed"})
 
     def _attach(self, page: Page) -> None:
+        if page in self._attached_pages:
+            return
+        self._attached_pages.add(page)
         self.page = page
         page.on("console", self._on_console)
         page.on("pageerror", lambda _: self.emit("page_error", {"category": "javascript_error"}))
@@ -111,11 +135,12 @@ class BrowserObserver:
         page.on("close", lambda: self._page_closed(page))
 
     def _page_closed(self, page: Page) -> None:
+        self._attached_pages.discard(page)
         if self._closing:
             return
         pages = [candidate for candidate in self.context.pages if not candidate.is_closed()] if self.context else []
         self.page = pages[-1] if pages else None
-        if not pages:
+        if not pages and not self.closed:
             self.closed = True
             self.emit("browser_closed", {"reason": "all_pages_closed"})
 
@@ -161,9 +186,25 @@ class BrowserObserver:
             task.cancel()
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
+        browser_stopped = not self._browser_launch_started
+        driver_stopped = self.playwright is None
         try:
-            if self.browser:
-                await self.browser.close()
+            try:
+                if self.context:
+                    await self.context.close()
+                    # Closing a persistent context also closes its browser.
+                    browser_stopped = self.settings.persistent_browser_session
+            finally:
+                if self.browser:
+                    await self.browser.close()
+                    browser_stopped = True
         finally:
-            if self.playwright:
-                await self.playwright.stop()
+            try:
+                if self.playwright:
+                    await self.playwright.stop()
+                    driver_stopped = True
+            finally:
+                # Keep a failed cleanup locked until process exit; never delete live data.
+                if self._profile_lease and (browser_stopped or driver_stopped):
+                    self._profile_lease.release()
+                    self._profile_lease = None

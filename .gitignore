@@ -12,6 +12,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 data/
+.ticketpilot-browser-profiles/
 test-results/
 playwright-report/
 frontend/dist/

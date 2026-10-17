@@ -24,10 +24,10 @@ npm run dev
 ## 研究流程
 
 1. 选择 ALL TICKET（默认）或 TTM，输入官方 HTTPS 活动 URL 和可选名称。目标活动与参考活动可一键填入。
-2. 开启会话，在弹出的 Chromium 中自行登录、处理验证码或排队。
+2. 开启会话，在弹出的 Chromium 中检查登录状态，按需登录、处理验证码或排队。
 3. 查看加载记录；点击观察按钮记录当前页面的可见结构和通用状态候选。未知页面明确标为未识别，座位状态为未验证。
 4. 按实际观察标记 T1（进入选座）、T2（人工选择后）、T3（人工确认后）。标记只记录时间，不执行平台操作，也不判定锁票成功。
-5. 导出脱敏 JSON；结束会话关闭浏览器并丢弃临时登录态。本地 SQLite 保留脱敏历史。
+5. 导出脱敏 JSON；结束会话关闭浏览器。默认丢弃临时登录态，启用自动保留后保存专用浏览器数据；本地 SQLite 仅保留脱敏历史。
 
 目标：[PlsLoveFanScreeningFinalEP](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)。参考：[LENAMIUGirlsNightOutBDParty](https://www.allticket.com/event/LENAMIUGirlsNightOutBDParty)。目标官方正文公告 **2026-10-18 北京时间 12:00 / 泰国时间 11:00 AM** 开售，公开文字于 2026-10-17 核实；但同页座区海报印有 **11:00 PM**，存在 12 小时冲突。程序按正文较早时间做准备并提示冲突，最终须复核官网更新。证据见 [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)，准备顺序见 [活动执行计划](docs/SALE_DAY_PLAN.md)，倒计时与购票代码分析见 [流程证据](docs/ALLTICKET_FLOW_EVIDENCE.md)。
 
@@ -47,11 +47,16 @@ npm run dev
 | --- | --- | --- |
 | `TICKETPILOT_HEADLESS` | `false` | 人工登录保留 false；true 仅供无需人工交互的测试 |
 | `TICKETPILOT_BROWSER_EXECUTABLE_PATH` | 空 | Playwright Chromium 或已有浏览器的完整路径 |
+| `TICKETPILOT_PERSISTENT_BROWSER_SESSION` | `false` | `true` 自动保存并复用各平台的专用浏览器数据，无需手动保存 |
 | `TICKETPILOT_DATA_DIR` | `data` | 本地 SQLite 目录 |
 | `TICKETPILOT_NAVIGATION_TIMEOUT_MS` | `45000` | 初始页面导航超时，不触发自动重试 |
 | `TICKETPILOT_CAPTURE_COOLDOWN_SECONDS` | `3` | 人工记录按钮的最短间隔 |
 
-不记录 Cookie、Token、原始正文、表单值、网络报文、HAR、trace 或真实页面截图。URL 路径、查询和片段脱敏后保存；活动名称供人工关联。浏览器登录态只存在于临时会话。
+研究记录不包含 Cookie、Token、原始正文、表单值、网络报文、HAR、trace 或真实页面截图。URL 路径、查询和片段脱敏后保存；活动名称供人工关联。
+
+启用自动保留后，浏览器会将 Cookie/localStorage 等敏感状态写入 `DATA_DIR/.ticketpilot-browser-profiles/{平台}`，不保证浏览器文件加密；POSIX 目录限制为当前系统用户访问。该数据不进入 Git、研究数据库、导出或发行包，也不会随源码下载迁移。结束会话后可在界面清除；使用中或尚未关闭完成时禁止清除。仅复用本应用的专用浏览器，不导入个人 Chrome 或 TinyFish 数据。
+
+“已保存浏览器数据”不表示官网仍认可登录。此功能没有密码填表或图片验证能力，失效后的自动重新登录仍未验证；TinyFish 是独立的云浏览器，不能通过本开关接入应用。
 
 ## 验证与依赖维护
 

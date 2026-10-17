@@ -23,7 +23,8 @@ CAPTURE = {
 class FakeBrowser:
     instances = []
 
-    def __init__(self, _settings, emit):
+    def __init__(self, _settings, emit, *, platform="allticket"):
+        self.platform = platform
         self.closed = False
         self.emit = emit
         self.capture_count = 0
@@ -194,6 +195,9 @@ async def test_session_slot_reserved_until_browser_cleanup_completes(tmp_path, c
         with pytest.raises(HTTPException) as error:
             await service.create(request)
         assert error.value.status_code == 409
+        with pytest.raises(HTTPException) as clear_error:
+            await service.clear_profile("allticket")
+        assert clear_error.value.status_code == 409
         assert len(DelayedCleanupBrowser.instances) == 1
 
         allow_cleanup.set()
@@ -211,12 +215,12 @@ async def test_session_slot_reserved_until_browser_cleanup_completes(tmp_path, c
 def test_factory_failure_is_sanitized_and_does_not_leave_opening_session(tmp_path):
     attempts = 0
 
-    def factory(settings, emit):
+    def factory(settings, emit, *, platform="allticket"):
         nonlocal attempts
         attempts += 1
         if attempts == 1:
             raise RuntimeError("private-factory-token")
-        return FakeBrowser(settings, emit)
+        return FakeBrowser(settings, emit, platform=platform)
 
     with TestClient(create_app(Settings(data_dir=tmp_path, headless=True), factory), base_url="http://localhost:8000") as client:
         first = client.post("/api/research/sessions", json={"url": "https://allticket.com/event"})
@@ -226,3 +230,60 @@ def test_factory_failure_is_sanitized_and_does_not_leave_opening_session(tmp_pat
         assert "private-factory-token" not in exported.text
         next_id = opened(client)
         assert client.get(f"/api/research/sessions/{next_id}").json()["status"] == "active"
+
+
+def test_profile_api_reports_unverified_data_and_clears_only_when_idle(tmp_path):
+    settings = Settings(_env_file=None, data_dir=tmp_path, headless=True, persistent_browser_session=True)
+    with TestClient(create_app(settings, FakeBrowser), base_url="http://localhost:8000") as client:
+        path = "/api/browser-profiles/allticket"
+        empty = client.get(path).json()
+        assert empty == {
+            "platform": "allticket", "persistence_enabled": True,
+            "saved_data_present": False, "login_status": "unverified",
+            "browser_in_use": False, "can_clear": True,
+        }
+        directory = client.app.state.research.profiles.path("allticket", create=True)
+        (directory / "fixture.json").write_text('{"synthetic": "never-export-this"}')
+        assert client.get(path).json()["saved_data_present"] is True
+        assert "never-export-this" not in client.get(path).text
+        assert str(tmp_path) not in client.get(path).text
+        session_id = opened(client)
+        assert client.get(path).json()["browser_in_use"] is True
+        assert client.get(path).json()["can_clear"] is False
+        assert client.post(path + "/clear").status_code == 409
+        assert directory.exists()
+        assert "never-export-this" not in client.get(f"/api/research/sessions/{session_id}/export").text
+        assert client.post(f"/api/research/sessions/{session_id}/close").status_code == 200
+        cleared = client.post(path + "/clear")
+        assert cleared.status_code == 200
+        assert cleared.json()["saved_data_present"] is False
+        assert cleared.json()["login_status"] == "unverified"
+        assert not directory.exists()
+
+
+def test_profile_api_enforces_origin_host_platform_and_external_lease(tmp_path):
+    settings = Settings(_env_file=None, data_dir=tmp_path, headless=True)
+    with TestClient(create_app(settings, FakeBrowser), base_url="http://localhost:8000") as client:
+        path = "/api/browser-profiles/ttm"
+        assert client.get(path).json()["persistence_enabled"] is False
+        assert client.get(path, headers={"Host": "evil.test"}).status_code == 400
+        assert client.get(path, headers={"Origin": "https://evil.test"}).status_code == 403
+        assert client.post(path + "/clear", headers={"Sec-Fetch-Site": "cross-site"}).status_code == 403
+        invalid = client.post("/api/browser-profiles/private-invalid-platform/clear")
+        assert invalid.status_code == 422
+        assert "private-invalid-platform" not in invalid.text
+        lease = client.app.state.research.profiles.acquire("ttm")
+        try:
+            assert client.get(path).json()["browser_in_use"] is True
+            assert client.post(path + "/clear").status_code == 409
+        finally:
+            lease.release()
+        assert client.post(path + "/clear").status_code == 200
+
+
+def test_research_factory_receives_platform_for_profile_isolation(client):
+    response = client.post("/api/research/sessions", json={
+        "platform": "ttm", "url": "https://www.thaiticketmajor.com/concert/demo.html"
+    })
+    assert response.status_code == 201
+    assert FakeBrowser.instances[-1].platform == "ttm"

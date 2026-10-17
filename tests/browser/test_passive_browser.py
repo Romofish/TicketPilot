@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from backend.services.browser import BrowserObserver
+from backend.services.browser_profiles import BrowserProfiles
 from backend.settings import Settings
 
 
@@ -73,6 +74,66 @@ async def test_real_chromium_observes_local_fixture_without_interaction_or_secre
         assert not list(tmp_path.iterdir())  # No HAR, screenshot, trace, or browser storage exported.
     finally:
         await observer.close()
+    assert observer.closed
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("persistent", [False, True])
+async def test_fixture_state_survives_browser_restart_only_in_persistent_mode(tmp_path, fixture_server, persistent):
+    origin, requests = fixture_server
+    executable = os.environ.get("TICKETPILOT_BROWSER_EXECUTABLE_PATH") or shutil.which("chromium")
+    settings = Settings(
+        _env_file=None, data_dir=tmp_path, headless=True, browser_executable_path=executable,
+        persistent_browser_session=persistent,
+    )
+    events = []
+    observer = BrowserObserver(settings, lambda kind, data: events.append({"kind": kind, "data": data}))
+    try:
+        await observer.open(origin + "/first")
+        assert observer.page in observer._attached_pages
+        await observer.page.evaluate("""() => {
+            localStorage.setItem('fixture-session', 'synthetic-retained-value');
+            document.cookie = 'fixture_session=synthetic-cookie; Max-Age=3600; SameSite=Lax';
+        }""")
+    finally:
+        await observer.close()
+
+    # New observer and new Chromium process, with the same application data directory.
+    reopened = BrowserObserver(settings.model_copy(), lambda kind, data: events.append({"kind": kind, "data": data}))
+    try:
+        await reopened.open(origin + "/reopened")
+        restored = await reopened.page.evaluate("localStorage.getItem('fixture-session')")
+        assert restored == ("synthetic-retained-value" if persistent else None)
+        cookie_present = await reopened.page.evaluate("document.cookie.includes('fixture_session=synthetic-cookie')")
+        assert cookie_present is persistent
+        assert await reopened.page.evaluate("window.orderInteractions") == 0
+        assert not any("/order" in request for request in requests)
+        serialized = json.dumps(events)
+        assert "synthetic-retained-value" not in serialized
+        assert "synthetic-cookie" not in serialized
+    finally:
+        await reopened.close()
+
+    profiles = BrowserProfiles(settings)
+    assert profiles.status("allticket")["saved_data_present"] is persistent
+    assert profiles.status("allticket")["browser_in_use"] is False
+    if persistent:
+        other_platform = BrowserObserver(settings, lambda *_args: None, platform="ttm")
+        try:
+            await other_platform.open(origin + "/other-platform")
+            assert await other_platform.page.evaluate("localStorage.getItem('fixture-session')") is None
+            assert not await other_platform.page.evaluate("document.cookie.includes('fixture_session=')")
+        finally:
+            await other_platform.close()
+        profiles.clear("allticket")
+        assert profiles.status("allticket")["saved_data_present"] is False
+        cleared = BrowserObserver(settings, lambda *_args: None)
+        try:
+            await cleared.open(origin + "/cleared")
+            assert await cleared.page.evaluate("localStorage.getItem('fixture-session')") is None
+            assert not await cleared.page.evaluate("document.cookie.includes('fixture_session=')")
+        finally:
+            await cleared.close()
     assert observer.closed
 
 

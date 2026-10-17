@@ -6,6 +6,7 @@ import type { ResearchConfig, ResearchEvent, Session } from './types';
 const config: ResearchConfig = {
   platforms: [{ id: 'allticket', label: 'ALL TICKET' }, { id: 'ttm', label: 'ThaiTicketMajor' }],
   browser_mode: 'headed', display_available: true, max_active_sessions: 1, capture_cooldown_seconds: 3,
+  persistent_browser_session: false,
 };
 const activeSession: Session = {
   id: 'research-1', platform: 'allticket', url: 'https://www.allticket.com/event/example',
@@ -30,6 +31,11 @@ function mockApi(options: { sessions?: Session[]; events?: ResearchEvent[]; conf
     let data: unknown;
     let status = 200;
     if (path === '/api/config') data = options.config ?? config;
+    else if (path.startsWith('/api/browser-profiles/')) data = {
+      platform: path.split('/').at(-1), persistence_enabled: (options.config ?? config).persistent_browser_session,
+      saved_data_present: false, login_status: 'unverified',
+      browser_in_use: sessions.some((session) => ['active', 'opening'].includes(session.status)), can_clear: false,
+    };
     else if (path === '/api/research/sessions' && method === 'GET') data = { sessions: [...sessions] };
     else if (path === '/api/research/sessions' && method === 'POST') {
       if (options.launchError) { data = { detail: options.launchError }; status = 503; }
@@ -94,7 +100,7 @@ describe('TicketPilot research workspace', () => {
     fireEvent.change(screen.getByLabelText(/活动 URL/), { target: { value: activeSession.url } });
     fireEvent.change(screen.getByLabelText(/研究名称/), { target: { value: '测试活动' } });
     fireEvent.click(screen.getByRole('button', { name: '打开研究浏览器' }));
-    expect(await screen.findByText('研究会话已创建。请在后端所在机器的浏览器中手动登录。')).toBeInTheDocument();
+    expect(await screen.findByText('研究会话已创建。请在后端所在机器的浏览器中查看登录状态，按需完成登录。')).toBeInTheDocument();
     const createCall = fetchMock.mock.calls.find(([path, init]) => path === '/api/research/sessions' && init?.method === 'POST');
     expect(JSON.parse(String(createCall?.[1]?.body))).toEqual({ platform: 'allticket', url: activeSession.url, event_name: '测试活动' });
     expect(screen.getByRole('button', { name: '打开研究浏览器' })).toBeDisabled();

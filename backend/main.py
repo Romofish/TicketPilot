@@ -1,5 +1,6 @@
 from collections.abc import Callable
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -71,10 +72,19 @@ def create_app(settings: Settings | None = None, browser_factory: Callable = Bro
             "display_available": configuration.display_available,
             "max_active_sessions": 1,
             "capture_cooldown_seconds": configuration.capture_cooldown_seconds,
+            "persistent_browser_session": configuration.persistent_browser_session,
         }
 
     def service() -> ResearchService:
         return application.state.research
+
+    @application.get("/api/browser-profiles/{platform}")
+    async def browser_profile(platform: Literal["allticket", "ttm"]) -> dict:
+        return service().profile_status(platform)
+
+    @application.post("/api/browser-profiles/{platform}/clear")
+    async def clear_browser_profile(platform: Literal["allticket", "ttm"]) -> dict:
+        return await service().clear_profile(platform)
 
     @application.get("/api/research/sessions")
     async def sessions() -> dict:

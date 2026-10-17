@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     data_dir: Path = Path("data")
     headless: bool = False
     browser_executable_path: str | None = None
+    persistent_browser_session: bool = False
     navigation_timeout_ms: int = Field(default=45000, ge=1000, le=120000)
     capture_cooldown_seconds: float = Field(default=3, ge=0, le=60)
 

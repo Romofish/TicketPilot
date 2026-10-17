@@ -51,12 +51,14 @@ def frontend_url(tmp_path_factory):
                 process.wait(timeout=5)
 
 
-async def mock_api(page, *, desktop=True):
+async def mock_api(page, *, desktop=True, persistence=False):
     sessions = []
     events = []
     mutations = []
+    saved_data = persistence
 
     async def handler(route):
+        nonlocal saved_data
         request = route.request
         path = request.url.split("/api", 1)[1]
         body = request.post_data_json if request.method == "POST" and request.post_data else {}
@@ -67,7 +69,15 @@ async def mock_api(page, *, desktop=True):
             result = {"platforms": [{"id": "allticket", "label": "ALL TICKET"},
                                      {"id": "ttm", "label": "ThaiTicketMajor"}],
                       "browser_mode": "headed", "display_available": desktop,
-                      "max_active_sessions": 1, "capture_cooldown_seconds": 3}
+                      "max_active_sessions": 1, "capture_cooldown_seconds": 3,
+                      "persistent_browser_session": persistence}
+        elif path.startswith("/browser-profiles/"):
+            busy = any(session["status"] == "active" for session in sessions)
+            if path.endswith("/clear") and request.method == "POST" and not busy:
+                saved_data = False
+            result = {"platform": path.split("/")[2], "persistence_enabled": persistence,
+                      "saved_data_present": saved_data, "login_status": "unverified",
+                      "browser_in_use": busy, "can_clear": not busy}
         elif path == "/research/sessions" and request.method == "POST":
             session = {"id": "local-fixture-session", "platform": body["platform"],
                        "url": "https://www.allticket.com/[redacted-path]",
@@ -157,6 +167,16 @@ async def test_mobile_workspace_has_no_horizontal_overflow(page, frontend_url):
     assert await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
     Path("test-results").mkdir(exist_ok=True)
     await page.screenshot(path="test-results/workspace-mobile.png", full_page=True)
+
+
+async def test_saved_session_status_and_clear(page, frontend_url):
+    mutations = await mock_api(page, persistence=True)
+    await page.goto(frontend_url)
+    await expect(page.get_by_text("自动保留已开启", exact=True)).to_be_visible()
+    await expect(page.get_by_text("已保存浏览器数据 · 登录未验证", exact=True)).to_be_visible()
+    await page.get_by_role("button", name="清除保存的浏览器数据", exact=True).click()
+    await expect(page.get_by_text("暂无已保存的浏览器数据 · 登录未验证", exact=True)).to_be_visible()
+    assert mutations == ["/browser-profiles/allticket/clear"]
 
 
 async def test_no_display_explains_local_manual_login_requirement(page, frontend_url):
