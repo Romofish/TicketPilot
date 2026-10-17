@@ -21,13 +21,13 @@ npm run dev
 
 ## 研究流程
 
-1. 选择 ALL TICKET（默认）或 TTM，输入官方 HTTPS 活动 URL 和可选名称。目标活动与在售参考活动可一键填入。
+1. 选择 ALL TICKET（默认）或 TTM，输入官方 HTTPS 活动 URL 和可选名称。目标活动与参考活动可一键填入。
 2. 开启会话，在弹出的 Chromium 中自行登录、处理验证码或排队。
 3. 查看加载记录；点击观察按钮记录当前页面的可见结构和通用状态候选。未知页面明确标为未识别，座位状态为未验证。
 4. 按实际观察标记 T1（进入选座）、T2（人工选择后）、T3（人工确认后）。标记只记录时间，不执行平台操作，也不判定锁票成功。
 5. 导出脱敏 JSON；结束会话关闭浏览器并丢弃临时登录态。本地 SQLite 保留脱敏历史。
 
-目标：[PlsLoveFanScreeningFinalEP](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)。参考：[LENAMIUGirlsNightOutBDParty](https://www.allticket.com/event/LENAMIUGirlsNightOutBDParty)。参考地址去掉了用户链接末尾的分号，规范 URL 尚待实地验证。用户提供开售时间为“明天泰国 11:00 / 北京 12:00”，以平台最终显示为准，见研究文档。
+目标：[PlsLoveFanScreeningFinalEP](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)。参考：[LENAMIUGirlsNightOutBDParty](https://www.allticket.com/event/LENAMIUGirlsNightOutBDParty)。参考地址去掉了用户链接末尾的分号，规范 URL 尚待实地验证。**官方开售日期、时间及购票规则待核实，以活动官方页面为准。** 用户已说明此前开售时间来自模糊记忆，该回忆不再作为日程或开发规划依据；核实证据记录在 [ALL TICKET 研究](docs/ALLTICKET_RESEARCH.md)，准备与操作顺序见 [活动执行计划](docs/SALE_DAY_PLAN.md)。
 
 ## 配置和隐私
 
