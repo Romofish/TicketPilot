@@ -1,0 +1,64 @@
+name: Upload verified draft release assets
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: Exact commit to package from the selected branch
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ticketpilot-m2-draft-release
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      RELEASE_TAG: v0.1.0-m2-preview
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check source and existing draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease,targetCommitish > /tmp/release.json
+          python3 - <<'PY'
+          import json, os
+          with open('/tmp/release.json') as stream:
+              release = json.load(stream)
+          assert release['isDraft'] is True, 'Refusing to modify a published release'
+          assert release['isPrerelease'] is True, 'Expected preview release'
+          assert release['targetCommitish'] == os.environ['EXPECTED_SHA'], 'Release source differs'
+          PY
+      - name: Package reproducibly
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/package_release.py
+          cp dist/SHA256SUMS /tmp/first-SHA256SUMS
+          python3 scripts/package_release.py
+          cmp /tmp/first-SHA256SUMS dist/SHA256SUMS
+          (cd dist && sha256sum -c SHA256SUMS)
+      - name: Upload and verify both assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release upload "$RELEASE_TAG" dist/TicketPilot-v0.1.0-m2-preview-source.zip dist/SHA256SUMS --clobber
+          gh release download "$RELEASE_TAG" --dir /tmp/release-download --pattern TicketPilot-v0.1.0-m2-preview-source.zip --pattern SHA256SUMS
+          (cd /tmp/release-download && sha256sum -c SHA256SUMS)
+          cmp dist/SHA256SUMS /tmp/release-download/SHA256SUMS
+          cmp dist/TicketPilot-v0.1.0-m2-preview-source.zip /tmp/release-download/TicketPilot-v0.1.0-m2-preview-source.zip
+          gh release view "$RELEASE_TAG" --json isDraft,isPrerelease,assets,url
+          cat dist/SHA256SUMS >> "$GITHUB_STEP_SUMMARY"

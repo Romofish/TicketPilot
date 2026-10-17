@@ -51,11 +51,16 @@ Windows PowerShell 可执行 `Get-FileHash .\TicketPilot-v0.1.0-m2-preview-sourc
 
 2026-10-17 集成验证：后端单元/API 30 项、前端 22 项、本地 Chromium 2 项、工作台 E2E 3 项，合计 57 项通过；类型/lint、生产构建、重复准备和锁文件一致性检查通过。详细命令与范围见 `docs/PROJECT_PLAN.md`。实际平台登录与购票流程未验证。
 
-## 已知限制与发布状态
+## 官方活动信息与已知限制
 
-- 当前云端对 ALL TICKET 的 HEAD 访问在代理 CONNECT 阶段返回 HTTP 403，未到达官网；没有获得真实页面结构、库存或锁票规则证据。人工登录及目标活动流程须在用户本地验证。
-- 用户已澄清此前开售时间只是模糊记忆，旧日期推算已撤回。正式日程与规则需从活动官方页核实；本版不内置未核实的倒计时或开售动作，参见 `docs/SALE_DAY_PLAN.md`。
-- 参考活动链接末尾分号暂按标点去除，原始输入仍在研究文档中，规范化候选地址未验证。
-- GitHub Draft Release 为用户要求的交付形式。当前 `api.github.com` 云网络访问受阻，连接器已确认仓库写权限，但云端 CLI 认证与上传能力尚未验证；本地 ZIP 生成不代表已经创建发布草稿。创建与上传需要云网络允许 `api.github.com`、`uploads.github.com`。真实平台云端研究另需 `www.allticket.com`；未修改任何基础配置。
+- [目标官方活动页](https://www.allticket.com/event/PlsLoveFanScreeningFinalEP)公开文字已于 2026-10-17 核实：**2026-10-18 11:00 Asia/Bangkok（GMT+7），即北京时间 12:00** 开售，网上和 7-Eleven 柜台同时开放。每单最多 4 张，禁止重复购买。
+- 票价 2,500 / 2,000 / 1,500 / 900 THB，每张另收 30 THB 服务费及适用付款渠道费。7-Eleven 现金付款码须在 30 分钟内付款；此期限不能视作锁票时长。取票与退改等规则见 `docs/SALE_DAY_PLAN.md` 和 `docs/ALLTICKET_RESEARCH.md`。
+- 参考活动官方地址已确认；其身份证专场和付款后 1 小时观众登记属于参考活动，不能套用到目标活动。
+- 本次云端读到公开详情文字；图片/CDN 和部分验证资源仍受策略限制，系统 Chromium 原生访问有 CA 信任问题。公开文字通过保留 TLS 校验的转发读取，未验证正常登录、完整座位图、库存、排队和锁票机制。
+- 发行包用于用户本地运行，仍需在本机确认图形浏览器、人工登录和官方最新完整规则；不内置倒计时、自动刷新或开售动作。
 
-源码已推送到 `release/v0.1.0-m2-preview` 专用分支；草稿 Release 尚未创建。源码 ZIP 已在全新临时目录通过准备和生产构建检查。
+## Draft Release 交付
+
+发布来源为 `release/v0.1.0-m2-preview` 专用分支。GitHub Release 保持 **draft=true、prerelease=true**，不公开发布；源码 ZIP 与 SHA256SUMS 由手动 GitHub Actions 工作流作为资产上传并回下载校验。云端直接上传曾返回 401，草稿创建成功不代表资产已就绪；实际工作流结果与资产状态以 GitHub 为准。草稿对有仓库相应权限的用户可见，具体结果见 `docs/PROJECT_PLAN.md`。
+
+本次恢复验证：`npm run setup`、类型/lint、后端 30 项、前端 22 项、本地 Chromium 2 项、工作台 E2E 3 项以及生产构建均通过，共 57 项测试。浏览器自动测试均使用本地 fixture/模拟 API，不代表已验证真实购票。

@@ -1,10 +1,10 @@
 # 项目计划与里程碑记录
 
-更新日期：2026-10-17（Asia/Shanghai）。当前优先级：**ALL TICKET 第一，TTM 第二**。用户已提供目标活动和参考活动 URL，选择本地运行并要求 GitHub Draft Release。用户澄清此前开售时间只是模糊记忆；原日期推算已撤回，官方活动页的时间和规则是规划依据。证据见 `ALLTICKET_RESEARCH.md`，待核实规则与执行顺序见 `SALE_DAY_PLAN.md`。
+更新日期：2026-10-17（Asia/Shanghai）。当前优先级：**ALL TICKET 第一，TTM 第二**。用户已提供目标活动和参考活动 URL，选择本地运行并要求 GitHub Draft Release。用户澄清此前开售时间只是模糊记忆；原日期推算已撤回，现已核实目标活动于 **2026-10-18 11:00 GMT+7（北京时间 12:00）** 开售，官方活动页的时间和规则是规划依据。证据见 `ALLTICKET_RESEARCH.md`，待核实规则与执行顺序见 `SALE_DAY_PLAN.md`。
 
 ## 当前状态
 
-M1、M2 工具实现已完成，并通过本地自动化测试及浏览器集成验证。云端 ALL TICKET 访问在代理连接阶段被阻断，尚无真实 ALL TICKET 或 TTM 页面观察证据；任何平台的页面结构、座位规则和锁票节点均未确认。完整准备流程连续运行两次成功，两份锁文件 SHA-256 未变。
+M1、M2 工具实现已完成，并通过本地自动化测试及浏览器集成验证。本次已读取两个 ALL TICKET 官方活动的公开文字，开售和文字购票规则已核实；图片及部分验证资源受阻，登录、座位图、库存和锁票节点仍未确认。TTM 尚无真实平台证据。完整准备流程连续运行两次成功，两份锁文件 SHA-256 未变。
 
 | 里程碑 | 状态 | 交付与验收标准 |
 | --- | --- | --- |
@@ -37,18 +37,22 @@ M1、M2 工具实现已完成，并通过本地自动化测试及浏览器集成
 
 ## GitHub Draft Release 交付
 
-- 用户要求：提供可供本地运行的 GitHub Draft Release。源码已推送到 `release/v0.1.0-m2-preview` 专用分支，初始交付提交 `353b053`；Release 草稿尚未创建。
-- 当前证据：执行 `gh api user` 时，对 `api.github.com` 的访问返回 Forbidden；当前云网络阻止访问，不能据此认定 GitHub 凭据无效或缺少发布权限，云端 CLI 认证仍未知。另已通过 GitHub 连接器确认 `Romofish/TicketPilot` 为当前远程仓库且具备 push/admin 权限。
-- 云环境需求：创建草稿及上传产物需要允许访问 `api.github.com`、`uploads.github.com`；云端平台研究另需 `www.allticket.com`。未修改网络策略或其他基础配置。
-- 本地交付验证：源码 ZIP 和 SHA256SUMS 已生成；连续打包字节一致；解压到全新临时目录后，`npm run setup` 和 `npm run build` 均通过，未复用项目的 node_modules、虚拟环境或缓存。发行包排除了真实 .env、数据库、缓存和浏览器登录状态。
-- 自动审批拒绝直接推送公开仓库 main，已采用审批建议的专用发布分支并成功推送；没有改写 main。
-- 更新：用户已确认保存并应用域名，但当前实例仍引用旧源配置版本，实际 allowed_hosts=[] 且 CONNECT 被拒绝；本会话没有重启/重新绑定接口。需要使当前聊天使用更新后的配置版本；无需重复添加已保存的域名。恢复后验证 CLI 认证，创建草稿并上传产物，详见 `CLOUD_NETWORK.md`。
+- 专用分支：`release/v0.1.0-m2-preview`，没有改写 main。
+- 已创建 [TicketPilot v0.1.0-m2-preview 草稿](https://github.com/Romofish/TicketPilot/releases/tag/untagged-1ccc95584cc5fb88385b)，Release ID `415622865`；API 已确认 `draft=true`、`prerelease=true`。草稿仅向有仓库相应权限的用户显示，不公开发布。
+- CLI 经原代理已确认 Romofish 和仓库 push/admin 权限；直接 `gh release upload` 在 `uploads.github.com` 返回 **401 Bad credentials**。这与先前网络 CONNECT 403 不同：API 认证及草稿创建成功，上传通道认证仍有问题，不能将 HEAD 可达或草稿创建等同于资产上传成功。
+- 资产交付改用 `.github/workflows/draft-release.yml`：仅手动触发，使用 GitHub Actions 标准 `GITHUB_TOKEN`，只允许更新现有草稿；校验指定提交与草稿 target 一致，重复打包、上传 ZIP/SHA256SUMS、回下载并逐字节比对。工作流不发布 Release，不访问票务平台，也不需要新增用户密钥。
+- 工作流实际执行结果须在 [Actions](https://github.com/Romofish/TicketPilot/actions/workflows/draft-release.yml) 和 Release 资产列表确认；直接 CLI 上传失败不作为上传完成的证据。最终交付状态另由本次执行结果报告。
+- 本地源码 ZIP 已重复打包字节一致；发行包排除真实 .env、数据库、缓存、依赖和浏览器登录状态。历史版本已在全新解压目录通过 setup/build，本次文档更新后的包另行复验。
 
-## 本次恢复验证
+## 本次恢复验证（2026-10-17，Asia/Shanghai）
 
-2026-10-17：已执行 `npm run setup` 和 `npm test`，类型/lint 及后端 30 项、前端 22 项均通过；`npm run build`、`npm run release:package` 与 `git diff --check` 通过。本次只更新上下文、研究证据与计划，未更改应用代码或依赖。此前本地 Chromium 和工作台 E2E 验证结果保持原范围，不视为真实网站验证。
-
-如需换用新云实例，从 `release/v0.1.0-m2-preview` 分支恢复，先按 `AGENTS.md` 准备和验证，再检查实际生效的域名列表。接续任务为：读取官方活动时间与规则、更新 `SALE_DAY_PLAN.md`、重新打包并创建 GitHub Draft Release。不要把新实例启动或 Git 分支推送视为草稿发布成功。
+- 已读取 AGENTS、PROJECT_PLAN、REQUIREMENTS、ASSUMPTIONS；核对 Node 24.19.0、npm 11.9.0、Python 3.12.14、uv 0.12.23，均匹配。
+- `npm run setup`、`npm run check`、`npm test`（后端 30、前端 22）、`npm run test:browser`（2）、`npm run test:e2e`（3）、`npm run build` 和 `git diff --check` 均通过，共 **57 项测试**。浏览器测试只使用本地 fixture/模拟 API；上游 Starlette/httpx 弃用警告 1 条。
+- 未修改应用代码、依赖、锁文件、运行时声明或真实 .env；新增手动草稿资产工作流。两份锁文件与恢复分支完全一致。
+- 新实例域名名单包含 ALL TICKET 和 GitHub API/上传域名。状态工具 policy.state=unknown，实际命令在 network 权限下成功访问 API 和官网公开文字；部分 CDN/验证资源仍被策略拒绝。详细范围见 `CLOUD_NETWORK.md`。
+- 官方证据：目标 **2026-10-18 11:00 GMT+7 / 北京时间 12:00** 开售，网上及柜台同时开放，每单最多 4 张且不得重复购买；价格、费用、付款和取票退改要求已写入 `ALLTICKET_RESEARCH.md` 与 `SALE_DAY_PLAN.md`。现金付款码 30 分钟不等于锁票时长。
+- 参考活动地址已确认，存在 BUY NOW 按钮；其身份证专场和付款后 1 小时实名规则独立记录，不用于目标活动。未验证实时库存。
+- 下一步：用户本地正常打开官网、复核完整规则并人工登录；M3 模拟器和后续选座辅助仍未开始。本次未新增倒计时、提醒、定时刷新或真实平台自动操作。
 
 ## 使用前需要区分的两类验证
 
